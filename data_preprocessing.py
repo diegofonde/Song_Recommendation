@@ -3,15 +3,20 @@
 ## Data Manipulation
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler
 
-# Data Visualization
+## Data Visualization
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 music_info = pd.read_csv('data/raw/Music Info.csv')
+music_info.head()
 
 listening_history = pd.read_csv('data/raw/User Listening History.csv')
+listening_history.head()
+
+music_info['genre'].head()
+music_info['tags'].head()
 
 ## Obtaining all column 
 music_info.columns
@@ -50,4 +55,23 @@ ax.set_ylabel = ('Number of songs')
 plt.tight_layout()
 plt.show()
 
+# Checking the biggest values for playcount in preparation for data preprocessing
 print(listening_history['playcount'].max())
+print(listening_history['playcount'].nlargest(50))
+
+# Data Preprocessing
+music_info_export = music_info
+listening_history_export = listening_history
+
+## Quantile transforming extremely skewed data 
+quantile_values = ['acousticness', 'instrumentalness', 'liveliness']
+qt = QuantileTransformer(output_distribution = 'normal', n_quantiles = 1000, random_state = 42)
+music_info_export[quantile_values] = qt.fit_transform(music_info[quantile_values])
+
+## MinMax scaling the rest of the quantitative variables
+quantitative_values = continuous - quantile_values
+sc = MinMaxScaler()
+music_info_export[quantitative_values] = sc.transform(music_info[quantitative_values])
+
+
+
