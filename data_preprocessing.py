@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler
 
-## Data Visualization
+# Data Visualization
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -21,6 +21,30 @@ music_info['tags'].head()
 ## Obtaining all column 
 music_info.columns
 listening_history.columns
+
+## Visualizing genre + tag distribution
+print(music_info['tags'].isna().sum()) # Checking to see how many NA rows are there for tags 
+print(music_info['genre'].isna().sum()) # Checking to see how many NA row are there for genre 
+
+## Genre
+genre_counts = music_info['genre'].value_counts()
+genre_counts.head()
+plt.figure(figsize=(12,8))
+sns.barplot(x = genre_counts.values, y = genre_counts.index, palette = 'viridis')
+plt.title('Genre distribution', fontsize = 15)
+plt.xlabel('Genre Count', fontsize = 12)
+plt.ylabel('Genre', fontsize = 12)
+
+## Tags
+tags_list = music_info['tags'].dropna().str.split(',') # Separate tags by comma
+flatten_tags_list = tags_list.explode().str.strip()
+tag_count = flatten_tags_list.value_counts()
+plt.figure(figsize=(12,8))
+sns.barplot(x = tag_count.values, y = tag_count.index, palette = 'viridis')
+plt.title('Tag distribution', fontsize = 15)
+plt.xlabel('Tag Count', fontsize = 12)
+plt.ylabel('Tag', fontsize = 12)
+
 
 ## Visualizing continious music data
 continuous = ['danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms']
@@ -64,14 +88,14 @@ music_info_export = music_info
 listening_history_export = listening_history
 
 ## Quantile transforming extremely skewed data 
-quantile_values = ['acousticness', 'instrumentalness', 'liveliness']
+quantile_values = ['acousticness', 'instrumentalness', 'liveness']
 qt = QuantileTransformer(output_distribution = 'normal', n_quantiles = 1000, random_state = 42)
 music_info_export[quantile_values] = qt.fit_transform(music_info[quantile_values])
 
 ## MinMax scaling the rest of the quantitative variables
-quantitative_values = continuous - quantile_values
+quantitative_values = ['danceability', 'energy', 'loudness', 'speechiness', 'valence', 'tempo', 'duration_ms']
 sc = MinMaxScaler()
-music_info_export[quantitative_values] = sc.transform(music_info[quantitative_values])
+music_info_export[quantitative_values] = sc.fit_transform(music_info[quantitative_values])
 
 
 
