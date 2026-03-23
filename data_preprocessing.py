@@ -3,6 +3,7 @@
 ## Data Manipulation
 import pandas as pd
 import numpy as np
+import scipy.sparse as sp
 from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler
 
 # Data Visualization
@@ -25,6 +26,8 @@ listening_history.columns
 ## Visualizing genre + tag distribution
 print(music_info['tags'].isna().sum()) # Checking to see how many NA rows are there for tags 
 print(music_info['genre'].isna().sum()) # Checking to see how many NA row are there for genre 
+total_na = music_info['tags'].isna().sum() & music_info['genre'].isna().sum()
+print(total_na.sum())
 
 ## Genre
 genre_counts = music_info['genre'].value_counts()
@@ -44,6 +47,7 @@ sns.barplot(x = tag_count.values, y = tag_count.index, palette = 'viridis')
 plt.title('Tag distribution', fontsize = 15)
 plt.xlabel('Tag Count', fontsize = 12)
 plt.ylabel('Tag', fontsize = 12)
+print(len(tag_count.index))
 
 
 ## Visualizing continious music data
