@@ -52,35 +52,22 @@ print(len(tag_count.index))
 print(music_info['year'].describe())
 
 music_info['era'] = music_info['year'].astype(str)
-music_info.loc[music_info['year'] < 1950, 'era'] = "Pre-1950s"
-music_info.loc[(music_info['year'] >= 1950) & (music_info['year'] < 1960), 'era'] = "1950s"
-music_info.loc[(music_info['year'] >= 1960) & (music_info['year'] < 1970), 'era'] = "1960s"
-music_info.loc[(music_info['year'] >= 1970) & (music_info['year'] < 1980), 'era'] = "1970s"
-music_info.loc[(music_info['year'] >= 1980) & (music_info['year'] < 1990), 'era'] = "1980s"
+music_info.loc[music_info['year'] < 1990, 'era'] = "Pre-1990s"
 music_info.loc[(music_info['year'] >= 1990) & (music_info['year'] < 2000), 'era'] = "1990s"
 music_info.loc[(music_info['year'] >= 2000) & (music_info['year'] < 2010), 'era'] = "2000s"
-music_info.loc[(music_info['year'] >= 2010) & (music_info['year'] < 2020), 'era'] = "2010s"
-music_info.loc[music_info['year'] >= 2020, 'era'] = "2020s"
+music_info.loc[music_info['year'] >= 2010, 'era'] = "2010+"
 
 era_distribution = music_info['era'].value_counts()
-era_order = ['Pre-1950s', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s']
+era_order = ['Pre-1990s', '1990s', '2000s', '2010+']
 plt.figure(figsize =(12,5))
-ax = sns.barplot(x = era_distribution.index, y = era_distribution.values, order = era_order, palette = 'viridis')
-ax.bar_label(ax.containers[0], padding = 3, fontsize = 10)
+ax = sns.barplot(x = era_distribution.values, y = era_distribution.index, order = era_order, palette = 'viridis')
+ax.set_xlabel('log')
+ax.bar_label(ax.containers[0], fmt='%,.0f', padding = 5)
 plt.title('Era distribution', fontsize = 15)
-plt.xlabel('Era', fontsize = 12)
-plt.ylabel('Era count', fontsize = 12)
-plt.ylim(0, era_distribution.max() * 1.1)
+plt.xlabel('Era count', fontsize = 12)
+plt.ylabel('Era', fontsize = 12)
+plt.xlim(0, era_distribution.max() * 1.2)
 plt.show()
-
-# year_distribution = music_info['year'].value_counts().sort_index()
-# plt.figure(figsize=(12,8))
-# sns.barplot(x = year_distribution.index, y = year_distribution.values, palette = 'viridis')
-# plt.title('Year distribution', fontsize = 15)
-# plt.xlabel('Year', fontsize = 12)
-# plt.ylabl('Year count', fontsize = 12)
-# print(year_distribution.index)
-
 
 ## Visualizing continious music data
 continuous = ['danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms']
