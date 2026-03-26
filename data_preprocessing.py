@@ -4,7 +4,8 @@
 import pandas as pd
 import numpy as np
 import scipy.sparse as sp
-from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, OneHotEncoder, LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Data Visualization
 import seaborn as sns
@@ -120,5 +121,35 @@ quantitative_values = ['danceability', 'energy', 'loudness', 'speechiness', 'val
 sc = MinMaxScaler()
 music_info_export[quantitative_values] = sc.fit_transform(music_info[quantitative_values])
 
+listening_history['log_playcount'] = np.log1p(listening_history['playcount']) # Adding 1 and loging playcounts for large playcount values and for playcount values that are equal to 0. Ensure that low playcount songs aren't discounted for
+listening_history_export['log_playcount'] = sc.fit_transform(listening_history[['log_playcount']]) # Min max scaling the log playcounts
 
+## One Hot encoding qualitative variables
+one_hot_variables = ['key', 'mode', 'era']
+oh = OneHotEncoder(sparse_output = False, dtype = 'int8') # sparse_output and dtype saves memort
+oh_array = oh.fit_transform(music_info[one_hot_variables])
+oh_df = pd.DataFrame(oh_array, columns = oh.get_feature_names_out(one_hot_variables), index = music_info.index)
+music_info_export = pd.concat([music_info_export, oh_df], axis = 1)
 
+## Label encoding track_id, and user_id
+le_track = LabelEncoder()
+le_user = LabelEncoder()
+le_artist = LabelEncoder()
+
+music_info_export['track_id'] = le_track.fit_transform(music_info[['track_id']])
+music_info_export['artist'] = le_artist.fit_transform(music_info[['artist']])
+listening_history_export['track_id'] = le_track.transform(listening_history[['track_id']])
+listening_history_export['user_id'] = le_user.fit_transform(listening_history[['user_id']])
+
+# Encoding genre/tags
+music_info_export.head()
+music_info_export.columns
+
+music_info_export.dropna(subset = ['tags']) # Dropping rows with empty tags
+valid_ids = set(music_info_export['track_id'])
+listening_history_export = listening_history_export[listening_history_export['track_id'].isin(valid_ids)] # Making sure listening_history only has the ids of those left in music_info
+
+music_info_export['tags'].head()
+tfidf = TfidfVectorizer(max_features = 50, token_pattern = r'[^,]+')
+tfidf_matrix = tfidf.fit_transform(music_info['tags'].fillna(''))
+print(tfidf_matrix)
