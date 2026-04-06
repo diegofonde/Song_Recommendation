@@ -11,6 +11,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Data Exporation
+import joblib
+import os
+
+
 music_info = pd.read_csv('data/raw/Music Info.csv')
 music_info.head()
 
@@ -141,7 +146,7 @@ music_info_export['artist'] = le_artist.fit_transform(music_info[['artist']])
 listening_history_export['track_id'] = le_track.transform(listening_history[['track_id']])
 listening_history_export['user_id'] = le_user.fit_transform(listening_history[['user_id']])
 
-# Encoding genre/tags
+## Encoding genre/tags
 music_info_export.head()
 music_info_export.columns
 
@@ -151,5 +156,32 @@ listening_history_export = listening_history_export[listening_history_export['tr
 
 music_info_export['tags'].head()
 tfidf = TfidfVectorizer(max_features = 50, token_pattern = r'[^,]+')
-tfidf_matrix = tfidf.fit_transform(music_info['tags'].fillna(''))
+tfidf_matrix = tfidf.fit_transform(music_info['tags'].fillna('')) # Turns tags into a sparse matrix based on which genre is most prevalant for the song 
 print(tfidf_matrix)
+
+# Exporting data
+
+## Exporting tags data first
+tag_weights = tfidf_matrix.toarray().astype('float32')
+tag_lookup_dictionary = dict(zip(music_info_export['track_id'], tag_weights)) # Dictionary to find all associated tags a song may have
+joblib.dump(tag_lookup_dictionary, os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'tag_lookup_dictionary.pkl'))
+joblib.dump(tfidf.get_feature_names_out(), os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'tag_names.pkl'))
+
+## Exporting song informtion
+
+### Exporting master key song data for future use
+music_info_export[['track_id', 'name', 'artist', 'spotify_preview_url', 'spotify_id']].to_csv(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'master_key.csv'), index = False)
+
+### Exporting song information for machine learning algorithms
+exports = ['year', 'duration_ms', 'danceability', 'energy', 'key',
+'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness',
+'liveness', 'valence', 'tempo', 'time_signature', 'era', 'key_0',
+'key_1', 'key_2', 'key_3', 'key_4', 'key_5', 'key_6', 'key_7', 'key_8',
+'key_9', 'key_10', 'key_11', 'mode_0', 'mode_1', 'era_1990s',
+'era_2000s', 'era_2010+', 'era_Pre-1990s']
+
+music_info_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'song_features.parquet'))
+
+## Exporting Listneing History
+exports = ['track_id', 'user_id', 'log_playcount']
+listening_history_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'listening_history.parquet'))
