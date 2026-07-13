@@ -8,12 +8,14 @@ Created on Mon Jul 13 23:00:22 2026
 
 ## Data Manipulation
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 
 ## Data Visualization
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+## Data Exportation
+import os
 
 # Importing preprocessed listening history
 listening_history = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\user_history.pkl')
@@ -72,4 +74,7 @@ print(test_set['log_playcount'].describe())
 print(validation_set['log_playcount'].describe())
 print(cv_training_set['log_playcount'].describe())
 
-# Exporting sets since the distributions are acceptable
+# Exporting datasets since the distributions are acceptable
+test_set.to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits', 'test_set.pkl'))
+validation_set.to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits', 'validation_set.pkl'))
+cv_training_set.to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits', 'cv_training_set.pkl'))

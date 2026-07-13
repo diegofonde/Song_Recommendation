@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Data Exporation
+# Data Exportation
 import joblib
 import os
 
