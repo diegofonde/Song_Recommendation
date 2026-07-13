@@ -15,11 +15,14 @@ import matplotlib.pyplot as plt
 import joblib
 import os
 
+folder_path = r"C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation"
+file_path = os.path.join(folder_path, "data", "raw", "Music Info.csv")
 
-music_info = pd.read_csv('data/raw/Music Info.csv')
+music_info = pd.read_csv(file_path)
 music_info.head()
 
-listening_history = pd.read_csv('data/raw/User Listening History.csv')
+file_path = os.path.join(folder_path, "data", "raw", "User Listening History.csv")
+listening_history = pd.read_csv(file_path)
 listening_history.head()
 
 music_info['genre'].head()
@@ -113,8 +116,8 @@ print(listening_history['playcount'].max())
 print(listening_history['playcount'].nlargest(50))
 
 # Data Preprocessing
-music_info_export = music_info
-listening_history_export = listening_history
+music_info_export = music_info.copy()
+listening_history_export = listening_history.copy()
 
 ## Quantile transforming extremely skewed data 
 quantile_values = ['acousticness', 'instrumentalness', 'liveness']
@@ -150,13 +153,13 @@ listening_history_export['user_id'] = le_user.fit_transform(listening_history[['
 music_info_export.head()
 music_info_export.columns
 
-music_info_export.dropna(subset = ['tags']) # Dropping rows with empty tags
+music_info_export = music_info_export.dropna(subset = ['tags']).copy() # Dropping rows with empty tags
 valid_ids = set(music_info_export['track_id'])
 listening_history_export = listening_history_export[listening_history_export['track_id'].isin(valid_ids)] # Making sure listening_history only has the ids of those left in music_info
 
 music_info_export['tags'].head()
 tfidf = TfidfVectorizer(max_features = 50, token_pattern = r'[^,]+')
-tfidf_matrix = tfidf.fit_transform(music_info['tags'].fillna('')) # Turns tags into a sparse matrix based on which genre is most prevalant for the song 
+tfidf_matrix = tfidf.fit_transform(music_info_export['tags']) # Turns tags into a sparse matrix based on which genre is most prevalant for the song 
 print(tfidf_matrix)
 
 # Exporting data
@@ -164,24 +167,23 @@ print(tfidf_matrix)
 ## Exporting tags data first
 tag_weights = tfidf_matrix.toarray().astype('float32')
 tag_lookup_dictionary = dict(zip(music_info_export['track_id'], tag_weights)) # Dictionary to find all associated tags a song may have
-joblib.dump(tag_lookup_dictionary, os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'tag_lookup_dictionary.pkl'))
-joblib.dump(tfidf.get_feature_names_out(), os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'tag_names.pkl'))
+joblib.dump(tag_lookup_dictionary, os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'tag_lookup_dictionary.pkl'))
+joblib.dump(tfidf.get_feature_names_out(), os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'tag_names.pkl'))
 
 ## Exporting song informtion
 
 ### Exporting master key song data for future use
-music_info_export[['track_id', 'name', 'artist', 'spotify_preview_url', 'spotify_id']].to_csv(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'master_key.csv'), index = False)
+music_info_export[['track_id', 'name', 'artist', 'spotify_preview_url', 'spotify_id']].to_csv(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'master_key.csv'), index = False)
 
 ### Exporting song information for machine learning algorithms
-exports = ['year', 'duration_ms', 'danceability', 'energy', 'key',
-'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness',
-'liveness', 'valence', 'tempo', 'time_signature', 'era', 'key_0',
-'key_1', 'key_2', 'key_3', 'key_4', 'key_5', 'key_6', 'key_7', 'key_8',
-'key_9', 'key_10', 'key_11', 'mode_0', 'mode_1', 'era_1990s',
-'era_2000s', 'era_2010+', 'era_Pre-1990s']
+exports = ['track_id', 'year', 'duration_ms', 'danceability', 'energy', 
+           'loudness', 'speechiness', 'acousticness', 'instrumentalness',
+           'liveness', 'valence', 'tempo', 'time_signature', 
+           'key_0', 'key_1', 'key_2', 'key_3', 'key_4', 'key_5', 'key_6', 'key_7', 'key_8', 'key_9', 'key_10', 'key_11', 
+           'mode_0', 'mode_1', 'era_1990s', 'era_2000s', 'era_2010+', 'era_Pre-1990s']
 
-music_info_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'song_features.parquet'))
+music_info_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'tag_lookup_dictionary.pkl'))
 
 ## Exporting Listneing History
 exports = ['track_id', 'user_id', 'log_playcount']
-listening_history_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\OneDrive - Chapman University\Desktop\Python_Projects\Song_Reommendation\data\processed', 'listening_history.parquet'))
+listening_history_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'tag_lookup_dictionary.pkl'))
