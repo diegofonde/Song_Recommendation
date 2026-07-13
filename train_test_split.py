@@ -28,3 +28,7 @@ test_set_ids, validation_set_ids = train_test_split(
     test_size = 0.5,
     random_state = 42
 )
+
+test_set = listening_history[listening_history['user_id'].isin(test_set_ids)]
+validation_set = listening_history[listening_history['user_id'].isin(validation_set_ids)]
+cv_training_set = listening_history[listening_history['user_id'].isin(cv_training_set_ids)]
