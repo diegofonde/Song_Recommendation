@@ -32,22 +32,38 @@ test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recomme
 validation_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\validation_set.pkl')
 cv_training_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\cv_training_set.pkl')
 
-max_test = test_set['track_id'].max()
-max_validation = validation_set['track_id'].max()
-max_train = cv_training_set['track_id'].max()
-
-num_tracks = max(max_test, max_validation, max_train)
+max_test_track = test_set['track_id'].max()
+max_validation_track = validation_set['track_id'].max()
+max_train_track = cv_training_set['track_id'].max()
+num_tracks = max(max_test_track, max_validation_track, max_train_track)
 print(num_tracks)
+
+max_test_user = test_set['user_id'].max()
+max_validation_user = validation_set['user_id'].max()
+max_train_user = cv_training_set['user_id'].max()
+num_users = max(max_test_user, max_validation_user, max_train_user)
+print(num_users)
+
 
 # Properly convertining data into dictionary format, ready for SAE input
 def convert(data):
+    
     new_data = {}
-    for user_id, track_id, log_playcount in zip(data['user_id'], data['track_id'], data['log_playcount']): # For loop loops through every column not row for pd
-
-        if user_id not in new_data:
-            new_data[user_id] = torch.zeros(num_tracks, dtype = torch.float32)
-         
-        new_data[user_id][track_id - 1] = log_playcount
+    
+    for user_id, group in data.groupby('user_id'):
+        
+        # Create a single, blank vector just for this specific user
+        user_vector = torch.zeros(num_tracks, dtype = torch.float32)
+        
+        # Pull out the tracks and playcounts for this user
+        track_ids = group['track_id'].values - 1
+        playcounts = group['log_playcount'].values
+        
+        # Fill just this user's vector
+        user_vector[track_ids] = torch.tensor(playcounts, dtype=torch.float32)
+        
+        # Save it to our dictionary
+        new_data[user_id] = user_vector
         
     return new_data
 
