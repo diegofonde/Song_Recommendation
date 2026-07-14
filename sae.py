@@ -43,11 +43,11 @@ print(num_tracks)
 def convert(data):
     new_data = {}
     for user_id, track_id, log_playcount in zip(data['user_id'], data['track_id'], data['log_playcount']): # For loop loops through every column not row for pd
-        
+
         if user_id not in new_data:
-            new_data[user_id] = {}
-            
-        new_data[user_id][track_id] = log_playcount
+            new_data[user_id] = torch.zeros(num_tracks, dtype = torch.float32)
+         
+        new_data[user_id][track_id - 1] = log_playcount
         
     return new_data
 
@@ -106,21 +106,17 @@ for epoch in range(0, nb_epoch):
         
     for id_user in cv_training_set.keys():
         
-        user_vector = torch.zeros(num_tracks, dtype = torch.float32) # Makes initial vector of 0s that represent the playcount a user has for a specific track_id
-        user_history = cv_training_set[id_user] # Gets the actual listening history of the user
+        user_history = cv_training_set[id_user] # Gets the vectorized listening history of the user
         
-        for track_id, log_playcount in user_history.items():
-            user_vector[track_id - 1] = log_playcount
-            
-        inputs = user_vector.unsqueeze(0) # Formats data in to [1, num_tracks]
+        inputs = user_history.unsqueeze(0) # Formats data in to [1, num_tracks]
         target = inputs.clone() # Actually values to be compared post decoder
         
         if torch.sum(target.data > 0) > 0:
             
             output = sae.forward(inputs)
             output = torch.where(target == 0, 0.0, output) # Makes it so that log playcount values that are actually 0 will automatically be predicted as 0, helps with model performance
-            
             loss = criterion(output, target)
+            train_loss += loss
             optimizer.zero_grad()
             loss.backward()
             s += 1.
