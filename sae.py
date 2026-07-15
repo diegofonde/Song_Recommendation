@@ -67,10 +67,12 @@ def convert(data):
         
     return new_data
 
-test_set = convert(test_set)
-validation_set = convert(validation_set)
-cv_training_set = convert(cv_training_set)  
-
+test_set_converted = convert(test_set)
+del test_set
+validation_set_converted = convert(validation_set)
+del validation_set
+cv_training_set_converted = convert(cv_training_set)  
+del cv_training_set
 
 # Creating architecture for SAE
 class SAE(nn.Module):
@@ -120,9 +122,9 @@ for epoch in range(0, nb_epoch):
     train_loss = 0
     s = 0.
         
-    for id_user in cv_training_set.keys():
+    for id_user in cv_training_set_converted.keys():
         
-        user_history = cv_training_set[id_user] # Gets the vectorized listening history of the user
+        user_history = cv_training_set_converted[id_user] # Gets the vectorized listening history of the user
         
         inputs = user_history.unsqueeze(0) # Formats data in to [1, num_tracks]
         target = inputs.clone() # Actually values to be compared post decoder
