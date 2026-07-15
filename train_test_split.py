@@ -26,7 +26,7 @@ unique_ids = listening_history['user_id'].unique() # Important so that in the te
 
 cv_training_set_ids, test_set_ids = train_test_split(
     unique_ids,
-    test_size = 0.2,
+    test_size = 0.4,
     random_state = 42
 )
 
