@@ -9,6 +9,7 @@ Created on Mon Apr  6 14:39:36 2026
 ## Data Manipulation
 import pandas as pd
 import numpy as np
+import gc
 
 # Data Visualization
 import seaborn as sns
@@ -30,30 +31,30 @@ from keras.callbacks import EarlyStopping
  
 test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\test_set.pkl')
 validation_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\validation_set.pkl')
-cv_training_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\cv_training_set.pkl')
+training_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\cv_training_set.pkl')
 
 max_test_track = test_set['track_id'].max()
 max_validation_track = validation_set['track_id'].max()
-max_train_track = cv_training_set['track_id'].max()
+max_train_track = training_set['track_id'].max()
 num_tracks = max(max_test_track, max_validation_track, max_train_track)
 print(num_tracks)
 
 max_test_user = test_set['user_id'].max()
 max_validation_user = validation_set['user_id'].max()
-max_train_user = cv_training_set['user_id'].max()
+max_train_user = training_set['user_id'].max()
 num_users = max(max_test_user, max_validation_user, max_train_user)
 print(num_users)
 
 
 # Properly convertining data into dictionary format, ready for SAE input
-def convert(data):
+def convert(data, total_tracks):
     
     new_data = {}
     
     for user_id, group in data.groupby('user_id'):
         
         # Create a single, blank vector just for this specific user
-        user_vector = torch.zeros(num_tracks, dtype = torch.float32)
+        user_vector = torch.zeros(total_tracks, dtype = torch.float32)
         
         # Pull out the tracks and playcounts for this user
         track_ids = group['track_id'].values - 1
@@ -67,12 +68,15 @@ def convert(data):
         
     return new_data
 
-test_set_converted = convert(test_set)
+test_set_converted = convert(test_set, num_tracks)
 del test_set
-validation_set_converted = convert(validation_set)
+gc.collect()
+validation_set_converted = convert(validation_set, num_tracks)
 del validation_set
-cv_training_set_converted = convert(cv_training_set)  
-del cv_training_set
+gc.collect()
+training_set_converted = convert(training_set, num_tracks)  
+del training_set
+gc.collect()
 
 # Creating architecture for SAE
 class SAE(nn.Module):
@@ -122,9 +126,9 @@ for epoch in range(0, nb_epoch):
     train_loss = 0
     s = 0.
         
-    for id_user in cv_training_set_converted.keys():
+    for id_user in training_set_converted.keys():
         
-        user_history = cv_training_set_converted[id_user] # Gets the vectorized listening history of the user
+        user_history = training_set_converted[id_user] # Gets the vectorized listening history of the user
         
         inputs = user_history.unsqueeze(0) # Formats data in to [1, num_tracks]
         target = inputs.clone() # Actually values to be compared post decoder
