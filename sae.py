@@ -28,6 +28,12 @@ from keras.optimizers import Adam
 from keras.optimizers import RMSprop
 from sklearn.model_selection import train_test_split
 from keras.callbacks import EarlyStopping
+
+print("GPU Active:", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("Device Name:", torch.cuda.get_device_name(0))
+    torch.cuda.empty_cache()
+
  
 test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\test_set.pkl')
 validation_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\validation_set.pkl')
@@ -115,19 +121,22 @@ optimizer = optim.Adam(
 )
 
 nb_epoch = 50
+batch_size = 1000
+
 # Training SAE
 for epoch in range(0, nb_epoch):
     train_loss = 0
     s = 0.
         
-    for id_user in range(num_users):
+    for user in range(0, num_users, batch_size):
         
-        user_vector = training_set_converted[id_user].to_dense() # Gets the vectorized listening history of the user
+        batch_indices = torch.arange(user, min(user + batch_size, num_users))
         
-        if torch.sum(user_vector) == 0: # If the specific split does not has any listening history for the user
+        inputs = torch.index_select(training_set_converted, 0, batch_indices).to_dense() # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
+        
+        if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user
             continue
-        
-        inputs = user_vector.unsqueeze(0) # Formats data in to [1, num_tracks]
+
         target = inputs.clone() # Actually values to be compared post decoder
         
         if torch.sum(target.data > 0) > 0:
