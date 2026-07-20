@@ -11,10 +11,6 @@ import pandas as pd
 import numpy as np
 import gc
 
-# Data Visualization
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 ## Modelling imports
 import torch
 import torch.nn as nn
@@ -22,18 +18,16 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 
-# Metric imports
-from tensorflow.keras.metrics import TopKCategoricalAccuracy
-from keras.optimizers import Adam
-from keras.optimizers import RMSprop
-from sklearn.model_selection import train_test_split
-from keras.callbacks import EarlyStopping
-
-print("GPU Active:", torch.cuda.is_available())
+gc.collect()
 if torch.cuda.is_available():
-    print("Device Name:", torch.cuda.get_device_name(0))
     torch.cuda.empty_cache()
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
+print(f"Target Device: {device}")
+if device.type == 'cuda':
+    print(f"GPU Name: {torch.cuda.get_device_name(0)}")
  
 test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\test_set.pkl')
 validation_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\validation_set.pkl')
@@ -81,17 +75,17 @@ gc.collect()
 
 # Creating architecture for SAE
 class SAE(nn.Module):
-    def __init__(self):
+    def __init__(self, tracks):
         super(SAE, self).__init__()
         # Encoder Layer
-        self.fc1 = nn.Linear(num_tracks, 1024)
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
+        self.fc1 = nn.Linear(tracks, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 64)
         
         # Decoder Layer
-        self.fc4 = nn.Linear(256, 512)
-        self.fc5 = nn.Linear(512, 1024)
-        self.fc6 = nn.Linear(1024, num_tracks)
+        self.fc4 = nn.Linear(64, 128)
+        self.fc5 = nn.Linear(128, 256)
+        self.fc6 = nn.Linear(256, tracks)
         
         # Activation function 
         self.activation = nn.Sigmoid()
@@ -113,15 +107,28 @@ class SAE(nn.Module):
         x = self.decoder(x)
         return x
         
-sae = SAE()
+sae = SAE(num_tracks)
+if device.type == 'cuda':
+    torch.cuda.empty_cache()
+    sae = sae.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(
     sae.parameters(), 
     lr=0.001, 
 )
 
+scaler = torch.amp.GradScaler('cuda') if device.type == 'cuda' else None
+
+def get_batch(sparse_tensor, start_user, end_user, num_tracks, device):
+    sub_sparse = sparse_tensor.narrow(0, start_user, end_user - start_user)
+    return sub_sparse.to_dense().to(device)
+    
+
 nb_epoch = 50
-batch_size = 1000
+batch_size = 256
+
+print("Starting training on GPU...")
+
 
 # Training SAE
 for epoch in range(0, nb_epoch):
@@ -132,25 +139,23 @@ for epoch in range(0, nb_epoch):
         
         batch_indices = torch.arange(user, min(user + batch_size, num_users))
         
-        inputs = torch.index_select(training_set_converted, 0, batch_indices).to_dense() # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
+        inputs = get_batch(training_set_converted, user, min(user + batch_size, num_users), num_tracks, device) # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
         
         if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user
             continue
-
-        target = inputs.clone() # Actually values to be compared post decoder
         
-        if torch.sum(target.data > 0) > 0:
-            
-            output = sae.forward(inputs)
-            output = torch.where(target == 0, 0.0, output) # Makes it so that log playcount values that are actually 0 will automatically be predicted as 0, helps with model performance
-            loss = criterion(output, target)
-            train_loss += loss.item()
+        non_zero_mask = inputs > 0 # Actual songs that user has playcounts for
+        
+        if non_zero_mask.any():
             optimizer.zero_grad()
+            output = sae.forward(inputs)
+            loss = criterion(output[non_zero_mask], inputs[non_zero_mask])
             loss.backward()
-            s += 1.
             optimizer.step()
+            train_loss += loss.item()
+            s += 1.
             
-    print('epoch: ' + str(epoch) + 'Loss: ' + str(train_loss/s))
+    print(f"Epoch {epoch + 1}/{nb_epoch} | Loss: {train_loss / max(s, 1.0):.6f}")
             
         
         
