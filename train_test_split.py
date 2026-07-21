@@ -21,6 +21,11 @@ import os
 listening_history = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\user_history.pkl')
 listening_history.head()
 
+# Cutting down dataset to only contain the tracks with 10 or more playcounts
+listening_history_tracks = listening_history.groupby(by = 'track_id')['log_playcount'].sum().reset_index()
+listening_history_tracks.head()
+
+
 # Getting the list of unique users from the dataset 
 unique_ids = listening_history['user_id'].unique() # Important so that in the test set we won't be predicting the tags of users that has data already inputted in the training set
 
