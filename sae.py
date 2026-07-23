@@ -10,6 +10,7 @@ Created on Mon Apr  6 14:39:36 2026
 import pandas as pd
 import numpy as np
 import gc
+from sklearn.preprocessing import LabelEncoder as le
 
 ## Modelling imports
 import torch
@@ -28,10 +29,15 @@ else:
 print(f"Target Device: {device}")
 if device.type == 'cuda':
     print(f"GPU Name: {torch.cuda.get_device_name(0)}")
- 
+
+# Importing Datasets
 test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\test_set.pkl')
 validation_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\validation_set.pkl')
 training_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\cv_training_set.pkl')
+
+# Label encoding user_id and track_id
+user_encoder = le()
+track_encoder = le()
 
 max_test_track = test_set['track_id'].max()
 max_validation_track = validation_set['track_id'].max()
