@@ -19,6 +19,7 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 
+
 device = torch.device('cpu')
 print(f"Target Device: {device}")
 
@@ -116,18 +117,48 @@ class SAE(nn.Module):
         
 sae = SAE(num_tracks)
 
-criterion = nn.MSELoss()
+criterion = nn.L1Loss()
 optimizer = optim.Adam(
     sae.parameters(), 
     lr=0.001, 
 )
 
 
-def get_batch(sparse_tensor, start_user, end_user):
-    length = end_user - start_user
-    sub_sparse = sparse_tensor.narrow(0, start_user, length)
+def get_batch(sparse_tensor, start_user, end_user): # Helper function to slice the data by batch
+    indices = torch.arange(start_user, end_user, dtype = torch.long)
+    sub_sparse = torch.index_select(sparse_tensor, 0, indices)
     return sub_sparse.to_dense()
     
+def validation(model, criterion, val_sparse, batch_size, num_users): # Helper function to run validations during training
+
+    model.eval() # Temporary switch to model evaluation
+    val_loss = 0.0
+    s = 0.
+    
+    with torch.no_grad():
+        
+        for user in range(0, num_users, batch_size):    
+            
+            end_user = min(user + batch_size, num_users)
+            
+            inputs = get_batch(training_set_converted, user, min(user + batch_size, num_users))
+            
+            if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user then it is passed
+                continue
+            
+            non_zero_mask = inputs > 0 # Actual songs that user has playcounts for
+            
+            if non_zero_mask.any():
+                
+                output = sae(inputs)
+                loss = criterion(output[non_zero_mask], inputs[non_zero_mask])
+                val_loss += loss.item()
+                s += 1.0
+                
+    model.train() # Revert back to training
+    return val_loss/max(s, 1.0)
+            
+            
 
 nb_epoch = 50
 batch_size = 256
@@ -139,11 +170,11 @@ for epoch in range(0, nb_epoch):
         
     for user in range(0, num_users, batch_size):
         
-        batch_indices = torch.arange(user, min(user + batch_size, num_users))
+        end_user = min(user + batch_size, num_users) # gets the indice of the last user within the batch
         
-        inputs = get_batch(training_set_converted, user, min(user + batch_size, num_users)) # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
+        inputs = get_batch(training_set_converted, user, end_user) # Gets the vectorized listening history of the user and formats data to [1, num_tracks]
         
-        if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user
+        if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user then it is passed
             continue
         
         non_zero_mask = inputs > 0 # Actual songs that user has playcounts for
@@ -158,7 +189,9 @@ for epoch in range(0, nb_epoch):
             train_loss += loss.item()
             s += 1.0
             
-    print(f"Epoch {epoch + 1}/{nb_epoch} | Loss: {train_loss / max(s, 1.0):.6f}")
+    val_loss = validation(sae, criterion, validation_set_converted, batch_size, num_users)
+    
+    print(f"Epoch {epoch + 1}/{nb_epoch} | Train Loss: {train_loss / max(s, 1.0):.6f} | Val Loss: {val_loss:.6f}")
             
         
         
