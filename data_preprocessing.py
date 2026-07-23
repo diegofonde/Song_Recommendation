@@ -30,14 +30,16 @@ music_info['tags'].head()
 
 music_info.columns
 listening_history.columns
+listening_history.describe()
 
-## Visualizing genre + tag distribution
 print(music_info['tags'].isna().sum()) # Checking to see how many NA rows are there for tags 
 print(music_info['genre'].isna().sum()) # Checking to see how many NA row are there for genre 
 total_na = music_info['tags'].isna() & music_info['genre'].isna()
 print(total_na.sum())
 
-## Genre
+## Visualizing genre + tag distribution
+
+### Genre
 genre_counts = music_info['genre'].value_counts()
 genre_counts.head()
 plt.figure(figsize=(12,8))
@@ -46,7 +48,7 @@ plt.title('Genre distribution', fontsize = 15)
 plt.xlabel('Genre Count', fontsize = 12)
 plt.ylabel('Genre', fontsize = 12)
 
-## Tags
+### Tags
 tags_list = music_info['tags'].dropna().str.split(',') # Separate tags by comma
 flatten_tags_list = tags_list.explode().str.strip()
 tag_count = flatten_tags_list.value_counts()
@@ -149,6 +151,42 @@ music_info_export['artist'] = le_artist.fit_transform(music_info[['artist']])
 listening_history_export['track_id'] = le_track.transform(listening_history[['track_id']])
 listening_history_export['user_id'] = le_user.fit_transform(listening_history[['user_id']])
 
+## Filtering out listening_history_export
+### Cutting down dataset to tracks that have at least 15 unique users
+track_listeners = (
+    listening_history_export.groupby('track_id')['user_id'].nunique().reset_index(name = 'user_count')    
+)
+valid_tracks = track_listeners[track_listeners['user_count'] >= 15]['track_id']
+listening_history_unique_listeners = listening_history_export[listening_history_export['track_id'].isin(valid_tracks)]
+listening_history_unique_listeners.describe()
+
+### Cutting down dataset to only contain the tracks with 5 or more total log_playcounts
+listening_history_tracks = listening_history_unique_listeners.groupby(by = 'track_id')['log_playcount'].sum().reset_index()
+listening_history_tracks.head()
+listening_history_tracks.describe()
+listening_history_tracks_top_playcount = listening_history_tracks[listening_history_tracks['log_playcount'] >= 5]
+listening_history_tracks_top_playcount.describe()
+top_playcount_track_id =  listening_history_tracks_top_playcount['track_id']
+listening_history_tracks_filtered = listening_history_unique_listeners[listening_history_unique_listeners['track_id'].isin(top_playcount_track_id)].copy()
+listening_history_tracks_filtered.describe()
+listening_history_export.describe()
+
+### Cutting down dataset to users that 5 or more total listens
+user_count = listening_history_tracks_filtered['user_id'].value_counts()
+active_users = user_count[user_count >= 5].index
+listening_history_users_filtered = listening_history_tracks_filtered[listening_history_tracks_filtered['user_id'].isin(active_users)].copy()
+listening_history_users_filtered.describe()
+listening_history_export.describe()
+
+### Cutting down dataset to only have playcounts that are > 1
+listening_history_playcount_filtered = listening_history_users_filtered[listening_history_users_filtered['playcount'] > 1] 
+listening_history_playcount_filtered.describe()
+
+### Making listening_history_export be the final filtered version
+listening_history_export = listening_history_playcount_filtered.copy()
+
+### 
+
 ## Encoding genre/tags
 music_info_export.head()
 music_info_export.columns
@@ -187,29 +225,3 @@ music_info_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Pyth
 ## Exporting Listneing History
 exports = ['track_id', 'user_id', 'log_playcount']
 listening_history_export[exports].to_parquet(os.path.join(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed', 'user_history.pkl'))
-
-# # Cutting down dataset to tracks that have at least 15 unique users
-# track_listeners = (
-#     listening_history.groupby('track_id')['user_id'].nunique().reset_index(name = 'user_count')    
-# )
-# valid_tracks = track_listeners[track_listeners['user_count'] >= 15]['track_id']
-# listening_history_unique_listeners = listening_history[listening_history['track_id'].isin(valid_tracks)]
-# listening_history_unique_listeners.describe()
-
-
-# # Cutting down dataset to only contain the tracks with 5 or more total log_playcounts
-# listening_history_tracks = listening_history_unique_listeners.groupby(by = 'track_id')['log_playcount'].sum().reset_index()
-# listening_history_tracks.head()
-# listening_history_tracks.describe()
-# listening_history_tracks_top_playcount = listening_history_tracks[listening_history_tracks['log_playcount'] >= 5]
-# listening_history_tracks_top_playcount.describe()
-# top_playcount_track_id =  listening_history_tracks_top_playcount['track_id']
-# listening_history_tracks_filtered = listening_history_unique_listeners[listening_history_unique_listeners['track_id'].isin(top_playcount_track_id)].copy()
-# listening_history_tracks_filtered.describe()
-# listening_history.describe()
-
-# # Cutting down dataset to users that 5 or more total listens
-# user_count = listening_history_tracks_filtered['user_id'].value_counts()
-# active_users = user_count[user_count >= 5].index
-# listening_history_users_filtered = listening_history_tracks_filtered[listening_history_tracks_filtered['user_id'].isin(active_users)].copy()
-# listening_history_users_filtered.describe()
