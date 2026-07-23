@@ -42,7 +42,6 @@ validation_set = listening_history[listening_history['user_id'].isin(validation_
 cv_training_set = listening_history[listening_history['user_id'].isin(cv_training_set_ids)]
 
 # Visualizing test set, validation set and training set to ensure that the distribution of playcount data is consistent throughout
-
 ## Visualizing testing_set playcounts
 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 sns.histplot(test_set['log_playcount'], bins = 100, kde = True, ax = ax, color = 'teal')
