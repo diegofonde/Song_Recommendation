@@ -19,16 +19,8 @@ import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
 
-gc.collect()
-if torch.cuda.is_available():
-    torch.cuda.empty_cache()
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-
+device = torch.device('cpu')
 print(f"Target Device: {device}")
-if device.type == 'cuda':
-    print(f"GPU Name: {torch.cuda.get_device_name(0)}")
 
 # Importing Datasets
 test_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Recommendation\data\processed\splits\test_set.pkl')
@@ -66,8 +58,8 @@ test_set.head()
 def convert(data, total_tracks, total_users):
     
     # First step is getting the indices that represents all the users and all of the tracks + the log playcount values
-    user_indices = data['user_id'].values - 1
-    track_indices = data['track_id'].values - 1
+    user_indices = data['user_id'].values
+    track_indices = data['track_id'].values
     log_playcount_values = data['log_playcount'].values
     
     indices = torch.tensor(np.vstack([user_indices, track_indices]), dtype = torch.long) # Indices has user_indices on top of the stacked torch array representing the user listening to a track, and below it is the track that the user listen to
@@ -123,27 +115,22 @@ class SAE(nn.Module):
         return x
         
 sae = SAE(num_tracks)
-if device.type == 'cuda':
-    torch.cuda.empty_cache()
-    sae = sae.to(device)
+
 criterion = nn.MSELoss()
 optimizer = optim.Adam(
     sae.parameters(), 
     lr=0.001, 
 )
 
-scaler = torch.amp.GradScaler('cuda') if device.type == 'cuda' else None
 
-def get_batch(sparse_tensor, start_user, end_user, num_tracks, device):
-    sub_sparse = sparse_tensor.narrow(0, start_user, end_user - start_user)
-    return sub_sparse.to_dense().to(device)
+def get_batch(sparse_tensor, start_user, end_user):
+    length = end_user - start_user
+    sub_sparse = sparse_tensor.narrow(0, start_user, length)
+    return sub_sparse.to_dense()
     
 
 nb_epoch = 50
 batch_size = 256
-
-print("Starting training on GPU...")
-
 
 # Training SAE
 for epoch in range(0, nb_epoch):
@@ -154,7 +141,7 @@ for epoch in range(0, nb_epoch):
         
         batch_indices = torch.arange(user, min(user + batch_size, num_users))
         
-        inputs = get_batch(training_set_converted, user, min(user + batch_size, num_users), num_tracks, device) # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
+        inputs = get_batch(training_set_converted, user, min(user + batch_size, num_users)) # Gets the vectorized listening history of the user and formats data to [250, num_tracks]
         
         if torch.sum(inputs) == 0: # If the specific split does not has any listening history for the user
             continue
@@ -162,13 +149,14 @@ for epoch in range(0, nb_epoch):
         non_zero_mask = inputs > 0 # Actual songs that user has playcounts for
         
         if non_zero_mask.any():
+            
             optimizer.zero_grad()
-            output = sae.forward(inputs)
+            output = sae(inputs)
             loss = criterion(output[non_zero_mask], inputs[non_zero_mask])
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
-            s += 1.
+            s += 1.0
             
     print(f"Epoch {epoch + 1}/{nb_epoch} | Loss: {train_loss / max(s, 1.0):.6f}")
             
