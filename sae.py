@@ -161,7 +161,7 @@ def validation(model, criterion, val_sparse, batch_size, num_users): # Helper fu
             
 
 nb_epoch = 50
-batch_size = 256
+batch_size = 1024
 
 # Training SAE
 for epoch in range(0, nb_epoch):
