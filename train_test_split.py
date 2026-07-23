@@ -22,34 +22,8 @@ listening_history = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Son
 listening_history.head()
 listening_history.describe()
 
-# Cutting down dataset to tracks that have at least 15 unique users
-track_listeners = (
-    listening_history.groupby('track_id')['user_id'].nunique().reset_index(name = 'user_count')    
-)
-valid_tracks = track_listeners[track_listeners['user_count'] >= 15]['track_id']
-listening_history_unique_listeners = listening_history[listening_history['track_id'].isin(valid_tracks)]
-listening_history_unique_listeners.describe()
-
-
-# Cutting down dataset to only contain the tracks with 5 or more total log_playcounts
-listening_history_tracks = listening_history_unique_listeners.groupby(by = 'track_id')['log_playcount'].sum().reset_index()
-listening_history_tracks.head()
-listening_history_tracks.describe()
-listening_history_tracks_top_playcount = listening_history_tracks[listening_history_tracks['log_playcount'] >= 5]
-listening_history_tracks_top_playcount.describe()
-top_playcount_track_id =  listening_history_tracks_top_playcount['track_id']
-listening_history_tracks_filtered = listening_history_unique_listeners[listening_history_unique_listeners['track_id'].isin(top_playcount_track_id)].copy()
-listening_history_tracks_filtered.describe()
-listening_history.describe()
-
-# Cutting down dataset to users that 5 or more total listens
-user_count = listening_history_tracks_filtered['user_id'].value_counts()
-active_users = user_count[user_count >= 5].index
-listening_history_users_filtered = listening_history_tracks_filtered[listening_history_tracks_filtered['user_id'].isin(active_users)].copy()
-listening_history_users_filtered.describe()
-
 # Getting the list of unique users from the dataset 
-unique_ids = listening_history_filtered['user_id'].unique() # Important so that in the test set we won't be predicting the tags of users that has data already inputted in the training set
+unique_ids = listening_history['user_id'].unique() # Important so that in the test set we won't be predicting the tags of users that has data already inputted in the training set
 
 cv_training_set_ids, test_set_ids = train_test_split(
     unique_ids,
@@ -63,9 +37,9 @@ test_set_ids, validation_set_ids = train_test_split(
     random_state = 42
 )
 
-test_set = listening_history_filtered[listening_history_filtered['user_id'].isin(test_set_ids)]
-validation_set = listening_history_filtered[listening_history_filtered['user_id'].isin(validation_set_ids)]
-cv_training_set = listening_history_filtered[listening_history_filtered['user_id'].isin(cv_training_set_ids)]
+test_set = listening_history[listening_history['user_id'].isin(test_set_ids)]
+validation_set = listening_history[listening_history['user_id'].isin(validation_set_ids)]
+cv_training_set = listening_history[listening_history['user_id'].isin(cv_training_set_ids)]
 
 # Visualizing test set, validation set and training set to ensure that the distribution of playcount data is consistent throughout
 
