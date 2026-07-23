@@ -39,16 +39,25 @@ training_set = pd.read_parquet(r'C:\Users\dbf98\Desktop\Python_Projects\Song_Rec
 user_encoder = le()
 track_encoder = le()
 
+all_user_ids = pd.concat([test_set['user_id'], validation_set['user_id'], training_set['user_id']]).unique()
+all_track_ids = pd.concat([test_set['track_id'], validation_set['track_id'], training_set['track_id']]).unique()
+user_encoder.fit(all_user_ids)
+track_encoder.fit(all_track_ids)
+
+for set in [test_set, validation_set, training_set]:
+    set['user_id'] = user_encoder.transform(set['user_id'])    
+    set['track_id'] = track_encoder.transform(set['track_id'])    
+
 max_test_track = test_set['track_id'].max()
 max_validation_track = validation_set['track_id'].max()
 max_train_track = training_set['track_id'].max()
-num_tracks = max(max_test_track, max_validation_track, max_train_track)
+num_tracks = max(max_test_track, max_validation_track, max_train_track) + 1
 print(num_tracks)
 
 max_test_user = test_set['user_id'].max()
 max_validation_user = validation_set['user_id'].max()
 max_train_user = training_set['user_id'].max()
-num_users = max(max_test_user, max_validation_user, max_train_user)
+num_users = max(max_test_user, max_validation_user, max_train_user) + 1
 print(num_users)
 
 test_set.head()
